@@ -4,7 +4,7 @@ requires = ["hatchling", "setuptools", "setuptools-scm"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "google_auth"
+name = "my_google_auth"
 version = "0.0.1"
 authors = [
   { name="Vicente González Ruiz", email="vicente.gonzalez.ruiz@gmail.com" },
@@ -23,6 +23,6 @@ dynamic = ["dependencies"]
 dependencies = {file = ["requirements.txt"]}
 
 [project.urls]
-"Homepage" = "https://github.com/vicente-gonzalez-ruiz/google_auth"
-"Bug Tracker" = "https://github.com/vicente-gonzalez-ruiz/google_auth/issues"
+"Homepage" = "https://github.com/vicente-gonzalez-ruiz/my_google_auth"
+"Bug Tracker" = "https://github.com/vicente-gonzalez-ruiz/my_google_auth/issues"
 
