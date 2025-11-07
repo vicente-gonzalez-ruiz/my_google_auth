@@ -1,0 +1,28 @@
+[build-system]
+requires = ["hatchling", "setuptools", "setuptools-scm"]
+#build-backend = "hatchling.build"
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "google_auth"
+version = "0.0.1"
+authors = [
+  { name="Vicente González Ruiz", email="vicente.gonzalez.ruiz@gmail.com" },
+]
+description = "Using Google Drive from Python"
+readme = "README.md"
+requires-python = ">=3.7"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+dynamic = ["dependencies"]
+
+[tool.setuptools.dynamic]
+dependencies = {file = ["requirements.txt"]}
+
+[project.urls]
+"Homepage" = "https://github.com/vicente-gonzalez-ruiz/google_auth"
+"Bug Tracker" = "https://github.com/vicente-gonzalez-ruiz/google_auth/issues"
+
