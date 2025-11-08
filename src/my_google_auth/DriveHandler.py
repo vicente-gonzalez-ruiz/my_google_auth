@@ -39,14 +39,42 @@ def get_drive_service():
     
     return build('drive', 'v3', credentials=creds)
 
-class MrcDriveHandler:
+class DriveHandler:
     
     def __init__(self, drive_service):
         self.service = drive_service
 
-    def upload_mrc(self, local_file_path, drive_file_name, drive_folder_id=None):
+    def delete_file(self, file_id):
         """
-        Uploads a local MRC file to Google Drive (resumable).
+        Deletes a file by its ID.
+        Returns True if successful, else False.
+        """
+        if file_id is None:
+            return False # Nothing to delete
+            
+        print(f"Attempting to delete file ID: {file_id}")
+        try:
+            self.service.files().delete(
+                fileId=file_id,
+                supportsAllDrives=True
+            ).execute()
+            
+            print(f"File deleted successfully.")
+            return True
+        
+        except HttpError as e:
+            if e.resp.status == 404:
+                print("File not found (it may already be deleted).")
+            else:
+                print(f"An error occurred during deletion: {e}")
+            return False
+        except Exception as e:
+            print(f"An unexpected error occurred during deletion: {e}")
+            return False
+
+    def upload_file_with_duplicates(self, local_file_path, drive_file_name, drive_folder_id=None):
+        """
+        Uploads a local file to Google Drive (resumable).
         """
         print(f"Starting upload for: {local_file_path}")
         mimetype = 'application/octet-stream'
@@ -89,7 +117,99 @@ class MrcDriveHandler:
             print(f"An error occurred during upload: {e}")
             return None
 
-    def download_mrc(self, file_id, local_save_path):
+    def _find_file_id(self, drive_file_name, drive_folder_id=None):
+        """
+        Searches for a file by name and parent folder.
+        Returns the file ID if found, else None.
+        (This is still needed for the delete operation)
+        """
+        
+        safe_name = drive_file_name.replace("'", "\\'")
+        query = f"name = '{safe_name}' and trashed = false"
+        
+        if drive_folder_id:
+            query += f" and '{drive_folder_id}' in parents"
+        else:
+            query += " and 'root' in parents"
+            
+        try:
+            response = self.service.files().list(
+                q=query,
+                fields="files(id, name)",
+                pageSize=5,
+                supportsAllDrives=True,
+                includeItemsFromAllDrives=True
+            ).execute()
+            
+            files = response.get('files', [])
+            
+            if len(files) == 0:
+                return None
+            if len(files) > 1:
+                print(f"Warning: Found multiple files named '{drive_file_name}'. "
+                      f"Will delete the first one found (ID: {files[0].get('id')}).")
+            
+            return files[0].get('id')
+            
+        except HttpError as e:
+            print(f"An error occurred during search: {e}")
+            return None
+
+    def upload(self, local_file_path, drive_file_name, 
+                   drive_folder_id=None):
+        """
+        Uploads a file. It ALWAYS deletes any pre-existing
+        file with the same name and location before uploading.
+        """
+        
+        # --- 1. ATTEMPT TO DELETE ---
+        print(f"Searching for and deleting existing file: '{drive_file_name}'")
+        existing_file_id = self._find_file_id(drive_file_name, drive_folder_id)
+        
+        if existing_file_id:
+            self.delete_file(existing_file_id)
+        else:
+            print("No existing file found. Proceeding with upload.")
+
+        # --- 2. ALWAYS CREATE ---
+        print(f"Uploading '{drive_file_name}' as a new file...")
+        mimetype = 'application/octet-stream'
+        media = MediaFileUpload(
+            local_file_path,
+            mimetype=mimetype,
+            resumable=True
+        )
+        
+        file_metadata = {'name': drive_file_name}
+        if drive_folder_id:
+            file_metadata['parents'] = [drive_folder_id]
+        else:
+            print("No folder ID provided. Uploading to 'My Drive' root.")
+        
+        try:
+            request = self.service.files().create(
+                body=file_metadata,
+                media_body=media,
+                fields='id, parents',
+                supportsAllDrives=True
+            )
+            
+            response = None
+            while response is None:
+                status, response = request.next_chunk()
+                if status:
+                    print(f"Uploaded {int(status.progress() * 100)}%")
+            
+            file_id = response.get('id')
+            print(f"Upload complete! File ID: {file_id}")
+            print(f"Stored in parent folder(s): {response.get('parents')}")
+            return file_id
+
+        except Exception as e:
+            print(f"An error occurred during upload: {e}")
+            return None
+
+    def download(self, file_id, local_save_path):
         """
         Downloads a file from Google Drive by its ID (resumable).
         """
