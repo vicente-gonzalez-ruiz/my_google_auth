@@ -75,7 +75,7 @@ class DriveHandler:
 
     def upload_file_with_duplicates(self, local_file_path, drive_file_name, drive_folder_id=None):
         """
-        Uploads a local file to Google Drive (resumable).
+        Uploads a local file to Google Drive (resumable). Returns file_id.
         """
         print(f"Starting upload for: {local_file_path}")
         mimetype = 'application/octet-stream'
@@ -118,7 +118,7 @@ class DriveHandler:
             print(f"An error occurred during upload: {e}")
             return None
 
-    def _find_file_id(self, drive_file_name, drive_folder_id=None):
+    def find_file_id(self, drive_file_name, drive_folder_id=None):
         """
         Searches for a file by name and parent folder.
         Returns the file ID if found, else None.
@@ -165,7 +165,7 @@ class DriveHandler:
         
         # --- 1. ATTEMPT TO DELETE ---
         print(f"Searching for and deleting existing file: '{drive_file_name}'")
-        existing_file_id = self._find_file_id(drive_file_name, drive_folder_id)
+        existing_file_id = self.find_file_id(drive_file_name, drive_folder_id)
         
         if existing_file_id:
             self.delete_file(existing_file_id)
